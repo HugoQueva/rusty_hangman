@@ -156,8 +156,9 @@ fn handle_word(input: &char, word: &mut Vec<Letter>, selected_word: &str) -> Wor
 fn main() {
     let stdin_buffer = io::stdin();
     let selected_word = select_word();
+    let mut blacklisted_letters: Vec<char> = Vec::new();
     let mut word = initialize_word(&selected_word);
-    let mut live: u8 = 14;
+    let mut live: u8 = 8;
 
     loop {
         draw_screen(live, &word);
@@ -165,6 +166,10 @@ fn main() {
         let input = handle_user_input(&stdin_buffer);
 
         if input == '⚠' {
+            continue;
+        }
+
+        if blacklisted_letters.iter().any(|c| c.to_ascii_lowercase() == input.to_ascii_lowercase()) {
             continue;
         }
 
@@ -187,6 +192,8 @@ fn main() {
                 continue;
             }
         };
+
+        blacklisted_letters.push(input);
     }
 
     if live <= 0 {
