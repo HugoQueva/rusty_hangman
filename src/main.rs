@@ -1,4 +1,5 @@
 use std::io;
+use std::io::Write;
 use std::string::String;
 use rand::prelude::*;
 
@@ -52,11 +53,7 @@ fn draw_screen(live: u8, word: &Vec<Letter>) {
     let mut word_display = String::new();
 
     for letter in word{
-        if letter.found {
-            word_display.push(letter.character);
-        }else{
-            word_display.push('_');
-        }
+        word_display.push(if (letter.found) { letter.character } else { '_' });
     }
 
     print!("{}[2J", 27 as char); //Go to blank page
@@ -79,7 +76,7 @@ fn draw_loose_screen() {
 }
 
 fn draw_won_screen() {
-    print!("{}[2J", 27 as char); //Go to blank page
+    print!("{}[2J", 27 as char);
     println!
     ("
     ===========================\
@@ -91,10 +88,8 @@ fn draw_won_screen() {
 //|----WORD-----|\\
 
 fn has_found_all_word(letters: &Vec<Letter>) -> bool{
-    for letter in letters {
-        if !letter.found {
-            return false;
-        }
+    if letters.iter().any(|l| !l.found) {
+        return false
     }
 
     true
@@ -126,31 +121,30 @@ fn handle_user_input(stdin: &io::Stdin) -> char {
 
     let _ = stdin.read_line(&mut input_buffer);
 
-    //⚠ represent an invalid character, we don't want the program to panic.
-    input_buffer.chars().next().unwrap_or('⚠')
+    //NOTE: Input is safely caught in `input.is_ascii()` check. Unwrap is safe here.
+    input_buffer.chars().next().unwrap()
 }
 
 fn handle_word(input: &char, word: &mut Vec<Letter>, selected_word: &str) -> WordResult {
     let mut found_letters = false;
 
-    if selected_word.chars().any(|c| c.to_ascii_lowercase() == input.to_ascii_lowercase()) {
+    if selected_word.chars().any(|c| c == *input) {
         for letter in word {
-            if letter.character.to_ascii_lowercase() == input.to_ascii_lowercase() {
-                if letter.found {
-                    return WordResult::AlreadyFound;
-                }
-
-                letter.found = true;
-                found_letters = true;
+            if letter.character != *input {
+                continue;
             }
+
+            if letter.found {
+                return WordResult::AlreadyFound;
+            }
+
+            letter.found = true;
+            found_letters = true;
         }
     }
 
-    if found_letters {
-        WordResult::Found
-    }else{
-        WordResult::NotFound
-    }
+    if found_letters { WordResult::Found }
+    else { WordResult::NotFound }
 }
 
 fn main() {
@@ -163,13 +157,13 @@ fn main() {
     loop {
         draw_screen(live, &word);
 
-        let input = handle_user_input(&stdin_buffer);
+        let input = handle_user_input(&stdin_buffer).to_ascii_lowercase();
 
-        if input == '⚠' {
+        if !input.is_ascii() {
             continue;
         }
 
-        if blacklisted_letters.iter().any(|c| c.to_ascii_lowercase() == input.to_ascii_lowercase()) {
+        if blacklisted_letters.iter().any(|c| *c == input) {
             continue;
         }
 
@@ -196,9 +190,6 @@ fn main() {
         blacklisted_letters.push(input);
     }
 
-    if live <= 0 {
-        draw_loose_screen();
-    } else{
-        draw_won_screen();
-    }
+    if live <= 0 { draw_loose_screen(); }
+    else{ draw_won_screen(); }
 }
